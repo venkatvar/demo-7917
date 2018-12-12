@@ -1,0 +1,33 @@
+env:
+  global:
+  - REPO=siamaksade/openshift-demos-ansible
+
+sudo: required
+language: python
+python: "2.7"
+
+services:
+  - docker
+
+before_install:
+  - docker login -u $DOCKER_USER -p $DOCKER_PASS
+
+install:
+  - pip install ansible
+  - ansible-galaxy install -r playbooks/coolstore/requirements.yml
+  - ansible-playbook playbooks/coolstore/undeploy.yml             --syntax-check
+  - ansible-playbook playbooks/coolstore/idle.yml                 --syntax-check
+  - ansible-playbook playbooks/coolstore/unidle.yml               --syntax-check
+  - ansible-playbook playbooks/coolstore/imagebuild-pipeline.yml  --syntax-check
+  - ansible-playbook playbooks/coolstore/msa-cicd-eap-full.yml    --syntax-check
+  - ansible-playbook playbooks/coolstore/msa-cicd-eap-min.yml     --syntax-check
+  - ansible-playbook playbooks/coolstore/msa-full.yml             --syntax-check
+  - ansible-playbook playbooks/coolstore/msa-min.yml              --syntax-check
+
+script:
+  - docker build -f Dockerfile -t $REPO:dev .
+
+after_success:
+  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
+  - docker tag $REPO:dev $REPO:$TAG
+  - docker push $REPO:$TAG
